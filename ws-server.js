@@ -41,7 +41,11 @@ wss.on('connection', function connection(ws) {
   {
 	  t1 = setInterval(function(){
 		t1on = true;
-		d=Math.floor(Math.random() * 100) + 1;
+		//d=Math.floor(Math.random() * 100) + 1;
+		d=d+1;
+		if(d>100)
+			d=0;
+		
 		var timestamp = + new Date();
 		var data = '{"ts":'+timestamp.toString()+',"value":'+d.toString()+'}';
 		console.log(data);

@@ -12,59 +12,57 @@ var ts_update =0;
 var ts_graph_update =0;
 //flag pause/play
 var is_pause = false;
-//array of data get from listener
-var my_data = [];
 
-//web socket uri
-/*for(i=0;i<100;i++)
-{
-   var DataItem = {ts:1000+i,value:i};
-   data.push(DataItem);
-   
-   alert(data[i].ts);
-}*/
+//timer create graph
+var time_delay = 15;  //delay 10s + cache for avoid delay 5 s
+var time_delay_millisec = 10*1000;   //time delay no cache in milliseconds
+var t2;
+var buff = new Array(time_delay);
+var current_graph_data=0;
+var current_data=0;
 
-//window.onload = onload;
 
 $(document).ready(function () {
-    //var t_current = 0;
+    //alarm, when no data from socket
+	$("#divAlarm").hide();	
+	setTimeout(function(){
+		t2 = setInterval(setGraphData,1000);
+	}, time_delay_millisec);
 	
 	if ("WebSocket" in window) {	   
-	   // Let us open a web socket
-	   var ws = new WebSocket("ws://localhost:8080");		
-	   //var ws = new WebSocket(wsUri);
-	   ws.onopen = function() {		  
-		  // Web Socket is connected, send data using send()
-		ws.send("Hello");
-		  //alert("Message is sent...");
+	    // Let us open a web socket
+	    var ws = new WebSocket("ws://localhost:8080");		
+	    //var ws = new WebSocket(wsUri);
+	    ws.onopen = function() {		  
+	    // Web Socket is connected, send data using send()
+	    //ws.send("Hello");
+	    //alert("Message is sent...");
 		//alert('ws open');
-		  //console.log("web socket open");
+		//console.log("web socket open");
 	   };
 		
 	   ws.onmessage = function (evt) { 
-         //alert('ws data');
-	    //console.log("web socket msg receipt");
-		  //console.log("msg: "+evt.data);
-		  var msg = JSON.parse(evt.data);
-		  //var timestamp = date.getTime();
-		  //if(ts_update==0 || msg.ts>=ts_update-1000)
-		  //{
-			//if(msg.ts>=ts_update-1000 && msg.ts>=ts_update-1900)
-			//{
-				var DataItem = {ts:msg.ts,value:msg.value};				
-				my_data.push(DataItem);				
+	    var msg = JSON.parse(evt.data);
+	    var prev_data = current_data-1;	
+		if(current_data==time_delay)
+		{
+			current_data=0;
+			prev_data=time_delay-1;
+		}
+		
+		if(ts_update==0 || buff[prev_data].ts<msg.ts)
+		{
+			ts_update = msg.ts;
+			var DataItem = {ts:msg.ts,value:msg.value};	
+			buff[current_data]=DataItem;				
+			current_data=current_data+1;
+		}
+		
+		console.log(msg.ts);
+		console.log(msg.value);
+		
+		//setGraph(msg);		
 				
-				console.log(msg.ts);
-				console.log(msg.value);
-				
-				setGraph(msg);
-				//setData(msg.value);
-				//setLabels(msg.ts);
-
-				var myLineChart = new Chart(ctx).Line(data, options);
-				
-			//}
-		  //}
 	   };
 	   
 	   ws.onerror = function (evt) {
@@ -80,21 +78,6 @@ $(document).ready(function () {
 	   // The browser doesn't support WebSocket
 	   alert("WebSocket NOT supported by your Browser!");
 	}				
-	//t1 alarm check every 1s
-	//var t1 = setInterval(chkAlarm,1000);
-
-
-/*function chkAlarm()
-{
-  if(ts_update<current timestamp-X sec) //X sec depends on alarm condition
-  {
-     //alarm
-	 //set alarm light to red	 
-  }else{
-     //clear alarm
-	 //set alarm light to green
-  }
-}*/
 
 
  var ctx = document.getElementById("myChart").getContext("2d");
@@ -129,47 +112,67 @@ $(document).ready(function () {
 
   var myLineChart = new Chart(ctx).Line(data, options);
 
-  function setGraph(m){    
-    //if(t_current>30)
-	  //t_current=0;
-	  
-    data.labels.push(ts_time(m.ts));
-	//data.labels.push(t_current.toString());
-    data.labels.shift();
-	
-	if(!is_pause){
-		data.datasets[0].data.push(m.value.toString());	
-	}else{
-		data.datasets[0].data.push(Number.NaN);	
-	}
-	data.datasets[0].data.shift();  
-	
-	//t_current = t_current+1;
-  }  
-  
-  function ts_time(ts)
-  {
-	var date = new Date(ts);
-	// Hours part from the timestamp
-	var hours = date.getHours();
-	// Minutes part from the timestamp
-	var minutes = "0" + date.getMinutes();
-	// Seconds part from the timestamp
-	var seconds = "0" + date.getSeconds();
+	function setGraph(m){    
+		data.labels.push(ts_time(m.ts));
+		data.labels.shift();
+		if(!is_pause && m.value!=Number.NaN){
+			data.datasets[0].data.push(m.value.toString());	
+		}else{
+			data.datasets[0].data.push(Number.NaN);	
+		}
+		data.datasets[0].data.shift();  
+		
+		var myLineChart = new Chart(ctx).Line(data, options);
+	}  
 
-	// Will display time in 10:30:23 format
-	var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);  
-	
-	return formattedTime;
-  }
-  
+	function ts_time(ts)
+	{
+	  var date = new Date(ts);
+	  // Hours part from the timestamp
+	  var hours = date.getHours();
+	  // Minutes part from the timestamp
+	  var minutes = "0" + date.getMinutes();
+	  // Seconds part from the timestamp
+	  var seconds = "0" + date.getSeconds();
+
+	  // Will display time in 10:30:23 format
+	  var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);  
+
+	  return formattedTime;
+	}
+
+	function setGraphData()
+	{
+		if(current_graph_data==time_delay)
+		{
+			current_graph_data=0;
+		}
+		if(ts_graph_update==0 || (buff[current_graph_data].ts>=ts_graph_update+1000 && buff[current_graph_data].ts<=ts_graph_update+1900))
+		{
+			setGraph(buff[current_graph_data]);
+			ts_graph_update=buff[current_graph_data].ts;
+			current_graph_data=current_graph_data+1;
+		}else{
+			//buff ts > graph data (socket data loss)
+			var DataItem = {ts:ts_graph_update+1000,value:Number.NaN};
+			ts_graph_update=ts_graph_update+1000;
+			
+			setGraph(DataItem);
+			
+			if(buff[current_graph_data]==ts_graph_update+1000)
+				current_graph_data=current_graph_data+1;
+		}
+		
+		
+	}
+ 
 });
 
 function PlayPause(a)
 {     
- is_pause = a; 
+	is_pause = a; 
 }
-
+	
 </script>
 
 </head>
@@ -177,7 +180,8 @@ function PlayPause(a)
 <body>
 
   <body>
-    <a href='javascript:void(0);' onclick='PlayPause(true);'>Pause</a>&nbsp;|<a href='javascript:void(0);' onclick='PlayPause(false);'>Play</a>&nbsp;
+    <a href='javascript:void(0);' onclick='PlayPause(true);'>Pause</a>&nbsp;|&nbsp;<a href='javascript:void(0);' onclick='PlayPause(false);'>Play</a>
+	<div id='divAlarm'>ALARM</div>
     <canvas id="myChart" width="400" height="400"></canvas>
   </body>
 
