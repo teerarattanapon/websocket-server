@@ -1,10 +1,9 @@
 const WebSocket = require('ws');
 
 
-
-
 var is_pause = false;
 
+//keyboard key press
 const readline = require('readline');
 
 readline.emitKeypressEvents(process.stdin);
@@ -23,9 +22,12 @@ process.stdin.on('keypress', (str, key) => {
 	}
   }
 });
+//keyboard key press
 
+//start websocket server
 const wss = new WebSocket.Server({ port: 8080 });
 
+//timer
 var t1on = false;
 var t1;
 var d=0;
@@ -43,14 +45,7 @@ wss.on('connection', function connection(ws) {
 		var timestamp = + new Date();
 		var data = '{"ts":'+timestamp.toString()+',"value":'+d.toString()+'}';
 		console.log(data);
-		/*wss.broadcast = function broadcast(data) {
-		  wss.clients.forEach(function each(client) {		
-			//if (client.readyState === WebSocket.OPEN) {
-			  client.send(data);
-			  console.log('sent');
-			//}
-		  });
-		};*/
+
 		console.log('Press \'p\' for pause, \'s\' for continue/start');
 		if (ws.readyState === WebSocket.OPEN) {
 			if(!is_pause)
@@ -58,25 +53,9 @@ wss.on('connection', function connection(ws) {
 			  ws.send(data);	  	 
 			  console.log('sent');
 			}
-		}
-		
+		}	
 	  },1000);
   }
-  //ws.send('{ts:0,value:0}');
 });
+//start websocket server
 
-function sendData(ws){
-	d=d+1;
-	var timestamp = + new Date();
-	var data = '{ts:'+timestamp.toString()+',value:'+d.toString()+'}';
-    console.log(data);
-	/*wss.broadcast = function broadcast(data) {
-	  wss.clients.forEach(function each(client) {		
-		//if (client.readyState === WebSocket.OPEN) {
-		  client.send(data);
-		  console.log('sent');
-		//}
-	  });
-	};*/
-	ws.send(data);
-}
