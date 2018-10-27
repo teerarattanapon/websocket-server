@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 
 
 var is_pause = false;
+var state = "sending";
 
 //keyboard key press
 const readline = require('readline');
@@ -15,10 +16,12 @@ process.stdin.on('keypress', (str, key) => {
     if(key.name==='p')
 	{
 		is_pause = true;
+		state = "pause";
 	}
 	if(key.name==='s')
 	{
 		is_pause = false;
+		state = "sending";
 	}
   }
 });
@@ -51,15 +54,23 @@ wss.on('connection', function connection(ws) {
 		console.log(data);
 
 		console.log('Press \'p\' for pause, \'s\' for continue/start');
-		if (ws.readyState === WebSocket.OPEN) {
+		console.log('mode: '+state);
+		//if (ws.readyState === WebSocket.OPEN) {
 			if(!is_pause)
 			{
-			  ws.send(data);	  	 
+			  //ws.send(data);	
+			  wss.broadcast(data);  	 
 			  console.log('sent');
 			}
-		}	
+		//}	
 	  },1000);
   }
 });
+
+wss.broadcast = function broadcast(msg) {
+   wss.clients.forEach(function each(client) {
+       client.send(msg);
+    });
+};
 //start websocket server
 
